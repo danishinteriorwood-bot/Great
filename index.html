@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multi-Pool Staking & Auto Spot Trading</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #0b0e14; color: #fff; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 10px; }
+    
+    .card { background-color: #161a23; border: 1px solid #272d3d; border-radius: 16px; width: 100%; max-width: 420px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); position: relative; margin-top: 10px; }
+    .text-center { text-align: center; }
+    .title { font-size: 20px; font-weight: bold; margin-bottom: 5px; }
+    .subtitle { font-size: 12px; color: #9ca3af; margin-bottom: 20px; }
+    
+    .input-group { margin-bottom: 15px; text-align: left; }
+    .input-group label { display: block; font-size: 12px; color: #9ca3af; margin-bottom: 5px; }
+    .input-group input { width: 100%; background: #0b0e14; border: 1px solid #272d3d; border-radius: 10px; padding: 12px; color: white; font-size: 14px; outline: none; }
+    
+    .btn { width: 100%; background: #10b981; color: #000; font-weight: bold; padding: 12px; border: none; border-radius: 10px; font-size: 15px; cursor: pointer; margin-top: 10px; }
+    .btn:active { opacity: 0.8; }
+    .btn-danger { background: #ef4444; color: #fff; }
+    .btn-secondary { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .btn-wallet { background: #2563eb; color: #fff; border: 1px solid #3b82f6; display: flex; align-items: center; justify-content: center; gap: 8px; }
+
+    .error-box { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #f87171; font-size: 12px; padding: 10px; border-radius: 8px; margin-bottom: 15px; display: none; }
+    
+    .notice-bar { background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.4); color: #fbbf24; border-radius: 10px; padding: 12px; font-size: 12px; line-height: 1.4; margin-bottom: 15px; display: flex; gap: 8px; align-items: flex-start; }
+
+    .nav-tabs { display: flex; background: #0b0e14; border-radius: 10px; padding: 4px; margin-bottom: 15px; border: 1px solid #272d3d; }
+    .tab-btn { flex: 1; background: none; border: none; color: #9ca3af; padding: 8px 0; font-size: 12px; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+    .tab-btn.active { background: #272d3d; color: #fff; }
+
+    #main-dashboard, #spot-trading-page { display: none; }
+    .stat-box { background: #0b0e14; border: 1px solid #272d3d; border-radius: 12px; padding: 15px; margin-bottom: 15px; }
+    .flex-between { display: flex; justify-content: space-between; align-items: center; }
+    .amount { font-size: 24px; font-weight: bold; color: #fff; margin-top: 5px; }
+    .profit { color: #10b981; font-weight: bold; font-size: 13px; }
+    .loss { color: #ef4444; font-weight: bold; font-size: 13px; }
+    
+    .pool-item { background: #0b0e14; border: 1px solid #1f2937; border-radius: 10px; padding: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .pool-name { font-size: 13px; font-weight: bold; }
+    .pool-sub { font-size: 11px; color: #9ca3af; }
+    .badge { background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: bold; }
+
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: center; padding: 15px; z-index: 100; }
+    .modal-content { background: #161a23; border: 1px solid #272d3d; border-radius: 16px; width: 100%; max-width: 380px; padding: 20px; position: relative; }
+    .close-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: #9ca3af; font-size: 18px; cursor: pointer; }
+    
+    .timer-box { background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: #fcd34d; padding: 12px; border-radius: 10px; margin-bottom: 15px; text-align: center; display: none; }
+    .countdown-display { font-family: monospace; font-size: 18px; font-weight: bold; color: #10b981; margin-top: 5px; }
+
+    .crypto-row { background: #0b0e14; border: 1px solid #1f2937; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .coin-icon { width: 28px; height: 28px; border-radius: 50%; background: #272d3d; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; margin-right: 10px; }
+
+    .bot-control-box { background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 12px; padding: 12px; margin-bottom: 15px; }
+    .toggle-switch { position: relative; display: inline-block; width: 44px; height: 22px; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; inset: 0; background-color: #374151; transition: .3s; border-radius: 22px; }
+    .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+    input:checked + .slider { background-color: #10b981; }
+    input:checked + .slider:before { transform: translateX(22px); }
+
+    .terminal-box { background: #05070a; border: 1px solid #1f2937; border-radius: 10px; padding: 10px; font-family: monospace; font-size: 11px; height: 130px; overflow-y: auto; color: #a7f3d0; margin-top: 10px; }
+    .log-line { margin-bottom: 4px; border-bottom: 1px dashed #111827; padding-bottom: 2px; }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen" class="card">
+    <div class="text-center">
+      <div class="title">Account Sign In</div>
+      <div class="subtitle">Enter details to access dashboard</div>
+    </div>
+    
+    <div id="error-msg" class="error-box">Please enter Email and Password.</div>
+
+    <div class="input-group">
+      <label>Email Address</label>
+      <input type="text" id="user-email" value="zh61262@gmail.com">
+    </div>
+    
+    <div class="input-group">
+      <label>Password</label>
+      <input type="password" id="user-pass" value="12345678">
+    </div>
+
+    <button class="btn" onclick="openDashboard()">Login to Dashboard</button>
+  </div>
+
+  <!-- MAIN APP CONTAINER -->
+  <div id="app-container" style="display: none; width: 100%; max-width: 420px;">
+    
+    <div class="nav-tabs">
+      <button id="tab-dash" class="tab-btn active" onclick="switchTab('dash')">Staking Dashboard</button>
+      <button id="tab-trade" class="tab-btn" onclick="switchTab('trade')">Auto Spot Trade</button>
+    </div>
+
+    <!-- PAGE 1: MAIN STAKING DASHBOARD -->
+    <div id="main-dashboard" class="card" style="display: block; margin-top: 0;">
+      <div class="flex-between" style="margin-bottom: 15px;">
+        <div>
+          <div class="title" style="font-size: 18px;">Staking Dashboard</div>
+          <div class="subtitle" style="margin: 0;" id="user-display">Active Session</div>
+        </div>
+        <span class="badge">ONLINE</span>
+      </div>
+
+      <div class="notice-bar">
+        <span>🔔</span>
+        <div>Your 2,670 USDT transfer order to your wallet is in process. Please wait and thanks for staking with our companies.</div>
+      </div>
+
+      <div class="stat-box">
+        <div class="flex-between">
+          <span style="font-size: 11px; color: #9ca3af;">TOTAL ALLOCATED</span>
+          <span class="profit">+$1.12 / day</span>
+        </div>
+        <div class="amount">2,670.00 <span style="font-size: 12px; color: #9ca3af;">USDT</span></div>
+      </div>
+
+      <button class="btn btn-wallet" id="wallet-btn" style="margin-bottom: 12px;">
+        <span style="font-size: 16px;">👛</span>
+        <span id="wallet-btn-text">Connect Wallet (TokenPocket)</span>
+      </button>
+
+      <div style="font-size: 12px; color: #9ca3af; margin-bottom: 10px;">ACTIVE POOLS</div>
+
+      <div class="pool-item">
+        <div>
+          <div class="pool-name">Yield Vault Alpha</div>
+          <div class="pool-sub">Auto-Compounding</div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 13px; font-weight: bold;">1,000.00 USDT</div>
+          <div class="profit" style="font-size: 11px;">14.2% APR</div>
+        </div>
+      </div>
+
+      <div class="pool-item">
+        <div>
+          <div class="pool-name">Layer-2 Staking Node</div>
+          <div class="pool-sub">Network Validator</div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 13px; font-weight: bold;">870.00 USDT</div>
+          <div class="profit" style="font-size: 11px;">12.8% APR</div>
+        </div>
+      </div>
+
+      <div class="pool-item">
+        <div>
+          <div class="pool-name">DePIN AI Infrastructure</div>
+          <div class="pool-sub">Compute Staking</div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 13px; font-weight: bold;">800.00 USDT</div>
+          <div class="profit" style="font-size: 11px;">18.5% APR</div>
+        </div>
+      </div>
+
+      <button class="btn" style="margin-bottom: 8px;" onclick="openManageModal()">Manage Allocations</button>
+      <button class="btn btn-danger" style="margin-top: 0;" onclick="logout()">Logout</button>
+    </div>
+
+    <!-- PAGE 2: AUTO SPOT TRADING PAGE -->
+    <div id="spot-trading-page" class="card" style="margin-top: 0;">
+      <div class="flex-between" style="margin-bottom: 10px;">
+        <div class="title" style="font-size: 18px;">Auto Spot Trading</div>
+        <span id="bot-status-badge" class="badge" style="background: rgba(107, 114, 128, 0.2); color:#9ca3af;">BOT OFF</span>
+      </div>
+      <div class="subtitle" style="margin-bottom: 12px;">Automated Algorithmic Spot Execution</div>
+
+      <div class="bot-control-box">
+        <div class="flex-between">
+          <div>
+            <div style="font-size: 13px; font-weight: bold;">Auto-Trader Engine</div>
+            <div style="font-size: 11px; color: #9ca3af;" id="bot-status-text">Toggle switch to start AI trades</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="bot-toggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div style="font-size: 12px; color: #9ca3af; margin-bottom: 8px;">LIVE PAIRS MONITORING (Binance API)</div>
+
+      <div id="crypto-list">
+        <!-- BTC -->
+        <div class="crypto-row">
+          <div style="display: flex; align-items: center;">
+            <div class="coin-icon" style="color: #f59e0b;">₿</div>
+            <div>
+              <div class="pool-name">Bitcoin / USDT</div>
+              <div class="pool-sub">BTC</div>
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 13px; font-weight: bold;" id="btc-price">Loading...</div>
+            <div class="profit" id="btc-change">--</div>
+          </div>
+        </div>
+
+        <!-- ETH -->
+        <div class="crypto-row">
+          <div style="display: flex; align-items: center;">
+            <div class="coin-icon" style="color: #8b5cf6;">Ξ</div>
+            <div>
+              <div class="pool-name">Ethereum / USDT</div>
+              <div class="pool-sub">ETH</div>
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 13px; font-weight: bold;" id="eth-price">Loading...</div>
+            <div class="profit" id="eth-change">--</div>
+          </div>
+        </div>
+
+        <!-- SOL -->
+        <div class="crypto-row">
+          <div style="display: flex; align-items: center;">
+            <div class="coin-icon" style="color: #14f195;">S</div>
+            <div>
+              <div class="pool-name">Solana / USDT</div>
+              <div class="pool-sub">SOL</div>
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 13px; font-weight: bold;" id="sol-price">Loading...</div>
+            <div class="profit" id="sol-change">--</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size: 12px; color: #9ca3af; margin-top: 10px;">AUTO-TRADE LOGS</div>
+      <div class="terminal-box" id="trade-terminal">
+        <div class="log-line" style="color: #6b7280;">[SYSTEM] Bot is idle. Turn ON switch to execute trades.</div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- MANAGE ALLOCATION MODAL -->
+  <div id="manage-modal" class="modal-overlay">
+    <div class="modal-content">
+      <button class="close-btn" onclick="closeManageModal()">&times;</button>
+      <div class="title" style="font-size: 18px; margin-bottom: 5px;">Manage Allocation</div>
+      <div class="subtitle">Choose an option for your staked funds.</div>
+
+      <div class="stat-box" style="margin-bottom: 15px;">
+        <span style="font-size: 11px; color: #9ca3af;">Available Balance</span>
+        <div style="font-size: 18px; font-weight: bold;">2,670.00 USDT</div>
+      </div>
+
+      <div id="timer-box" class="timer-box">
+        <div style="font-size: 12px; font-weight: bold; margin-bottom: 3px;">Withdrawal Pending</div>
+        <div style="font-size: 11px; color: #d1d5db;">Processing unstake request (48 Hours lock)</div>
+        <div class="countdown-display" id="countdown">48:00:00</div>
+      </div>
+
+      <button class="btn btn-danger" style="margin-top: 0; margin-bottom: 8px;" onclick="startWithdrawal()">Stop Staking & Withdraw to Wallet</button>
+      <button class="btn btn-secondary" style="margin-top: 0;" onclick="closeManageModal()">Click to Continue Staking</button>
+    </div>
+  </div>
+
+  <script>
+    var timerInterval = null;
+
+    function openDashboard() {
+      var email = document.getElementById('user-email').value;
+      var pass = document.getElementById('user-pass').value;
+
+      if (email.trim() !== "" && pass.trim() !== "") {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app-container').style.display = 'block';
+        document.getElementById('user-display').innerText = email;
+        fetchLiveCryptoPrices();
+        setInterval(fetchLiveCryptoPrices, 5000);
+      } else {
+        document.getElementById('error-msg').style.display = 'block';
+      }
+    }
+
+    function logout() {
+      document.getElementById('app-container').style.display = 'none';
+      document.getElementById('login-screen').style.display = 'block';
+    }
+
+    function switchTab(tab) {
+      if(tab === 'dash') {
+        document.getElementById('main-dashboard').style.display = 'block';
+        document.getElementById('spot-trading-page').style.display = 'none';
+        document.getElementById('tab-dash').classList.add('active');
+        document.getElementById('tab-trade').classList.remove('active');
+      } else {
+        document.getElementById('main-dashboard').style.display = 'none';
+        document.getElementById('spot-trading-page').style.display = 'block';
+        document.getElementById('tab-trade').classList.add('active');
+        document.getElementById('tab-dash').classList.remove('active');
+      }
+    }
+
+    function openManageModal() { document.getElementById('manage-modal').style.display = 'flex'; }
+    function closeManageModal() { document.getElementById('manage-modal').style.display = 'none'; }
+
+    function startWithdrawal() {
+      var timerBox = document.getElementById('timer-box');
+      timerBox.style.display = 'block';
+      var totalSeconds = 48 * 3600;
+
+      if (timerInterval) clearInterval(timerInterval);
+
+      timerInterval = setInterval(function() {
+        if (totalSeconds <= 0) {
+          clearInterval(timerInterval);
+          document.getElementById('countdown').innerText = "00:00:00";
+          return;
+        }
+        totalSeconds--;
+        var h = Math.floor(totalSeconds / 3600);
+        var m = Math.floor((totalSeconds % 3600) / 60);
+        var s = totalSeconds % 60;
+
+        document.getElementById('countdown').innerText = 
+          (h < 10 ? "0" + h : h) + ":" + 
+          (m < 10 ? "0" + m : m) + ":" + 
+          (s < 10 ? "0" + s : s);
+      }, 1000);
+    }
+
+    async function fetchLiveCryptoPrices() {
+      const symbols = [
+        { ticker: 'BTCUSDT', priceElem: 'btc-price', changeElem: 'btc-change' },
+        { ticker: 'ETHUSDT', priceElem: 'eth-price', changeElem: 'eth-change' },
+        { ticker: 'SOLUSDT', priceElem: 'sol-price', changeElem: 'sol-change' }
+      ];
+
+      for (const coin of symbols) {
+        try {
+          const res = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbol=${coin.ticker}`);
+          const data = await res.json();
+          
+          if (data && data.lastPrice) {
+            const price = parseFloat(data.lastPrice).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const change = parseFloat(data.priceChangePercent).toFixed(2);
+            
+            document.getElementById(coin.priceElem).innerText = `$${price}`;
+            
+            const changeElement = document.getElementById(coin.changeElem);
+            if (change >= 0) {
+              changeElement.innerText = `+${change}%`;
+              changeElement.className = 'profit';
+            } else {
+              changeElement.innerText = `${change}%`;
+              changeElement.className = 'loss';
+            }
+          }
+        } catch (err) {
+          console.error(`Error fetching price for ${coin.ticker}:`, err);
+        }
+      }
+    }
+  </script>
+</body>
+</html>
